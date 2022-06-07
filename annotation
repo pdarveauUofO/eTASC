@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>eTASC Annotation Tool Development</title>
+  <style>
+
+
+/*
+span.annotation1:hover {
+	color: orange; border-bottom:5px solid; padding-bottom:24px;
+}
+span.annotation2:hover {
+	color: blue; border-bottom:5px solid; padding-bottom:18px;
+}
+span.annotation3:hover {
+	color: red; border-bottom:5px solid; padding-bottom:12px;
+}
+span.annotation4:hover {
+	color: green; border-bottom:5px solid; padding-bottom:6px;
+}
+*/
+
+    .test {
+      position:relative;
+      top:50px;
+      text-align:center;
+	line-height: 3;
+      /* outline: 1px solid red; */
+    }
+
+     .newtest {line-height: 3;}
+	
+/* Nesting scheme
+p { width:150px; line-height:2em; }
+
+
+span.annotation { border-bottom:2px solid; }
+
+span.annotation span.annotation { padding-bottom:6px; }
+
+span.annotation span.annotation span.annotation { padding-bottom:12px; }
+
+span.annotation span.annotation span.annotation span.annotation { padding-bottom:18px; }
+*/
+
+/* p { width:150px; line-height:2em; } */
+
+
+/* CSS specificity */
+span.annotation1 { border-bottom:2px solid; padding-bottom:24px; }
+span.annotation2 { border-bottom:2px solid; padding-bottom:18px; }
+span.annotation3 { border-bottom:2px solid; padding-bottom:12px; }
+span.annotation4 { border-bottom:2px solid; padding-bottom:6px; }
+
+a.annotation1 { color: orange; border-bottom:2px solid; padding-bottom:24px; }
+a.annotation2 { color:blue; border-bottom:2px solid; padding-bottom:18px; }
+a.annotation3 { color:red; border-bottom:2px solid; padding-bottom:12px; }
+a.annotation4 { color:green; border-bottom:2px solid; padding-bottom:6px; }
+
+line.annotation1 {stroke:rgb(255,165,0); stroke-width:4;}
+line.annotation2 {stroke:rgb(0,0,255); stroke-width:4;}
+line.annotation3 {stroke:rgb(255,0,0); stroke-width:4;}
+line.annotation4 {stroke:rgb(34,139,34); stroke-width:4;}
+
+
+span[data-uid="001"] { border-color:orange; }
+span[data-uid="002"] { border-color:blue; }
+span[data-uid="003"] { border-color:red; }
+span[data-uid="004"] { border-color:green; }
+
+
+</style>
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script>
+$(document).ready(function() {
+	$("line").click(function(){
+	  $("line").wrap("<a></a>");
+	});
+});
+</script>
+
+
+<link rel="stylesheet" type="text/css" href="/textAnnotator/css/style.css">
+</head>
+
+
+<body>
+  <main>
+
+<div id="game">
+    <button class="clicktarget" type="button" data-show="#addnote" onClick="choose('001')">1-Orange</button>
+    <button class="clicktarget" type="button" data-show="#addnote" onClick="choose('002')">2-Blue</button>
+    <button class="clicktarget" type="button" data-show="#addnote" onClick="choose('003')">3-Red</button>
+    <button class="clicktarget" type="button" data-show="#addnote" onClick="choose('004')">4-Green</button>
+    <div id="result"></div>
+    <br>
+    <br>
+    <button onClick="test()">DEBUG</button>
+<!-- <button type="submit">Save Note</button> -->
+	<input type="submit" form ="noteform" class="after" onclick="wrapSelectedText();" value="Annotate" /> 
+
+
+</div><br>
+
+
+<svg height="210" width="500">
+  <text x="40" y="40">SVG test text</text>
+  <a href="http://www.google.com">
+  <line x1="0" y1="50" x2="200" y2="50" style="stroke:rgb(255,0,0);stroke-width:2" />
+  </a>
+  <a href="http://www.uottawa.ca">
+  <line x1="0" y1="60" x2="200" y2="60" style="stroke:rgb(145,160,40);stroke-width:2" />
+  </a>
+
+  <text x="40" y="140">SVG test text 1</text>
+  <a href="http://www.uottawa.ca">
+  <line x1="0" y1="150" x2="200" y2="150" style="stroke:rgb(145,160,40);stroke-width:2" />
+  </a>
+</svg>
+
+<h5> Start offset: <span id="startoff"></span></h5>
+<h5> End offset: <span id="endoff"></span></h5>
+
+<div id="editor" contenteditable="true"><text id="text1" class="newtest">Lorem ipsum<span class="annotation1" data-uid="001">dolor sit amet, consectetur adipiscing elit. N</span>am rhoncus  gravida magna, quis interdum magna mattis quis. Fusce tempor sagittis  varius. Nunc at augue at erat suscipit bibendum id nec enim. Sed eu odio  quis t<span class="annotation2" data-uid="002">urpis hendrerit sagittis id sit amet justo. Cras ac </span>urna purus,  non rutrum nunc. Aenean nec vulputate ante. Morbi scelerisque sagittis  hendrerit. Pellenesque habitant morbi tristitque senectus et netus et  malesuada fames ac turpis egestas.</text></div>
+<div>
+</div>
+
+<h5><div id="selectionLog"></div></h5>
+
+
+<div>
+<text class='newtest'>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam rhoncus  gravida magna, quis interdum magna mattis quis. Fusce tempor sagittis  varius. Nunc at augue at erat suscipit bibendum id nec enim. Sed eu odio  quis turpis hendrerit sagittis id sit amet justo. Cras ac urna purus,  non rutrum nunc. Aenean nec vulputate ante. Morbi scelerisque sagittis  hendrerit. Pellentesque habitant morbi tristique senectus et netus et  malesuada fames ac turpis egestas. Nulla tristique ligula fermentum  tortor semper at consectetur erat aliquam. Sed gravida consectetur  sollicitudin. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</text>
+
+</div>
+
+
+<br>
+<br>
+
+
+<!-- START PouchDB section -->
+<header>
+        <h1>Annotation Offset Log</h1>
+        <nav>
+             
+	</nav>
+    </header>
+<div>
+<p class="rel">
+            <button class="clicktarget" type="button" data-action="viewnoteset" data-show="#allnotes" data-hide="section:not(#allnotes)">View DB</button>
+        	<button class="clicktarget" type="button" data-show="#addnote" data-hide="section:not(#addnote)">Manual Add</button>
+        </p>
+        
+        <section id="addnote">
+        <form id="noteform" method="post" data-show="#allnotes" data-hide="#addnote">
+            <div class="hide" id="buttonwrapper">
+                <button class="clicktarget edit" type="button">Edit Note</button>
+                <button class="clicktarget delete" type="button">Delete Note</button>
+            </div>
+            <p>
+                <input type="hidden" id="_rev" name="_rev" value="">
+                <input type="hidden" id="_id"  name="_id" value="">
+                <label for="notetitle">Title:</label>
+                <input type="text" id="notetitle" name="anntitle" placeholder="Untitled Note" value="">
+
+		<label for="annclass">Class:</label>
+                <input type="text" id="annclass" name="annclass" placeholder="Untitled Class" value="">
+
+		<label for="inputstartoff">Start Offset:</label>
+                <input type="text" id="inputstartoff" name="startofftitle" placeholder="Untitled Start Offset" value="">
+
+		<label for="inputendoff">End Offset:</label>
+                <input type="text" id="inputendoff" name="startofftitle" placeholder="Untitled End Offset" value="">
+
+            </p>
+
+	   <p>
+                <label for="note">Note text:</label>
+               <!--  <textarea id="note" name="note" cols="50" rows="5" placeholder="Add note text here. This field is required." required></textarea> -->
+		<textarea id="note" name="note" cols="50" rows="5"></textarea>
+            </p>
+          
+            <p>
+                <label for="tags">Tags:</label>
+                <input type="text" id="tags" name="tags">
+                <span class="guidance">Separate tags with a comma</span>
+            </p>
+            
+            <p class="rel">
+                <input type="file" id="attachment" name="attachment" class="abs">
+                <label for="attachment" class="btn">Attachment(s):</label>
+                <span class="filelist"></span>
+    	    </p>
+            
+            <div id="attachments" class="hide">
+            	<h2>Attachments</h2>
+    	    	<ul id="attachmentlist"></ul>
+    	    </div>
+    	    
+            <p>
+                <button type="submit">Save Note</button>
+            </p>
+        </form>
+       </section>
+        
+        <section id="allnotes" class="hide">
+            <h2>DB Data</h2>
+            <form id="searchnotes" method="get">
+                <p>
+                    <label for="q">Search</label> 
+                    <input type="search" id="q" name="q">
+                    <button type="submit">Search</button>
+                </p>
+            </form>
+            
+            
+            <table id="notelist">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Created</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>    
+        </section>  
+
+<div id="errordialog" class="dialog hide" data-action="close">
+        <div>
+            <button type="button" data-action="close"></button>
+            <h1>Error</h1>
+            <div class="msg"></div>
+        </div>
+    </div>
+</div>
+<!-- END PouchDB section-->
+
+
+
+  </main>
+
+  <script>
+
+
+
+function wrapSelectedText() {       
+    var selection = window.getSelection().getRangeAt(0);
+    // var range = selection.getRangeAt(0).cloneRange();
+    var selectedText = selection.extractContents();
+    var span = document.createElement("span");
+	var newLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+	var newLink = document.createElement('a');
+	var ann = '';
+    var a = document.createElement("a");
+    
+    
+	if (user == '001') {
+	ann = 'annotation1'
+	}
+	if (user == '002') {
+	ann = 'annotation2'
+	}
+	if (user == '003') {
+	ann = 'annotation3'
+	}
+	if (user == '004') {
+	ann = 'annotation4'
+	}
+	document.getElementById('annclass').value = ann;
+	// document.getElementById('inputstartoff').value = StartOff;
+	// document.getElementById('inputendoff').value = EndOff;
+
+	// a.href = "http://localhostXYZ";
+	// a.setAttribute('class', ann);
+	// a.setAttribute('style', 'text-decoration:none');
+	// a.setAttribute('data-uid', user);
+	// a.appendChild(selectedText);
+	// selection.insertNode(a);
+	
+	
+	// span.setAttribute('class', 'annotation2');
+	
+	span.setAttribute('class', ann);
+	span.setAttribute('data-uid', user);
+	
+	span.appendChild(selectedText);
+	
+	selection.insertNode(span);
+	
+	 document.body.appendChild(a);
+	const svg = document.querySelector("svg");
+	newLink.setAttribute('href', 'http://localhost1');
+	newLine.setAttribute('id', 'line2');
+	newLine.setAttribute('x1', '0');
+	newLine.setAttribute('y1', '0');
+	newLine.setAttribute('x2', '300');
+	newLine.setAttribute('y2', '0');
+	
+	newLine.setAttribute('class', ann);
+	
+	svg.appendChild(newLine);
+	newLink.appendChild(a);
+	
+	
+}
+
+var StartOff
+var EndOff
+
+function handler(event) {
+	// Display text in browser console
+	// var selection1 = window.getSelection().getRangeAt(0);
+        // var range = selection.getRangeAt(0).cloneRange();
+
+	 const selection = window.getSelection();
+	const range = selection.getRangeAt(0);
+	 
+         // const range = selection.getRangeAt(0).cloneRange();
+	  StartOff = range.startOffset;
+	  EndOff = range.endOffset;
+	// document.getElementById('startoff').innerHTML = StartOff;
+	// document.getElementById('inputstartoff').value = StartOff;
+	// document.getElementById('endoff').innerHTML = EndOff;
+	// document.getElementById('inputendoff').value = EndOff;
+	
+	let text = window.getSelection().toString();
+	console.log(text);
+	// console.log(selection1);
+}
+addEventListener("mouseup", handler);
+
+
+/*
+    document.addEventListener('DOMContentLoaded', function(event){
+
+      function surroundSelectionWithSpan() {
+	
+        const selection = window.getSelection()
+        const range = selection.getRangeAt(0).cloneRange()
+
+        if (range.endOffset - range.startOffset > 0) {
+          const span = document.createElement('span')
+          // span.setAttribute('style', 'color: red; backgroundColor: transparent;')
+	   span.setAttribute('class', 'annotation')
+	 // span.setAttribute('class', 'user')
+	  span.setAttribute('data-uid', user)	
+
+        //  console.log('range', range)
+
+         range.surroundContents(span)
+         selection.removeAllRanges()
+	
+        }
+      }
+
+      document.querySelector('.test').addEventListener('mouseup', surroundSelectionWithSpan);
+    })
+*/
+
+var user;
+function choose(choice){
+    user = choice;
+}
+
+function test(click){
+    alert("You chose " + "'"+user+"'");
+}   
+
+
+// Offset code
+
+function getSelectionCharacterOffsetWithin(element) {
+    var start = 0;
+    var end = 0;
+    var doc = element.ownerDocument || element.document;
+    var win = doc.defaultView || doc.parentWindow;
+    var sel;
+    if (typeof win.getSelection != "undefined") {
+        sel = win.getSelection();
+        if (sel.rangeCount > 0) {
+            var range = win.getSelection().getRangeAt(0);
+            var preCaretRange = range.cloneRange();
+            preCaretRange.selectNodeContents(element);
+            preCaretRange.setEnd(range.startContainer, range.startOffset);
+            start = preCaretRange.toString().length;
+            preCaretRange.setEnd(range.endContainer, range.endOffset);
+            end = preCaretRange.toString().length;
+        }
+    } else if ( (sel = doc.selection) && sel.type != "Control") {
+        var textRange = sel.createRange();
+        var preCaretTextRange = doc.body.createTextRange();
+        preCaretTextRange.moveToElementText(element);
+        preCaretTextRange.setEndPoint("EndToStart", textRange);
+        start = preCaretTextRange.text.length;
+        preCaretTextRange.setEndPoint("EndToEnd", textRange);
+        end = preCaretTextRange.text.length;
+    }
+    return { start: start, end: end };
+}
+
+function reportSelection() {
+  var selOffsets = getSelectionCharacterOffsetWithin( document.getElementById("editor") );
+  document.getElementById("selectionLog").innerHTML = "Selection offsets: " + selOffsets.start + ", " + selOffsets.end+" <br> Selected Element's id: 'element here'";
+
+	document.getElementById('startoff').innerHTML = selOffsets.start;
+	document.getElementById('endoff').innerHTML = selOffsets.end;
+
+}
+
+window.onload = function() {
+  document.addEventListener("selectionchange", reportSelection, false);
+  document.addEventListener("mouseup", reportSelection, false);
+  document.addEventListener("mousedown", reportSelection, false);
+  document.addEventListener("keyup", reportSelection, false);
+};
+
+
+
+
+
+  </script>
+    <script src="js/pouchdb-nightly.min.js"></script>
+    <script src="js/application.js"></script>
+</body>
+</html>
